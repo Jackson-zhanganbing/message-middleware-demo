@@ -1,0 +1,18 @@
+spring:
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin
+  jms:
+    pub-sub-domain: true
+
+  rabbitmq:
+    host: 118.24.232.124
+    port: 5672
+    username: admin
+    password: admin
+    #虚拟host 可以不设置,使用server默认host
+    virtual-host: zabhost
+
+server:
+  port: 8080
