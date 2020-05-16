@@ -7,24 +7,29 @@ import rpc.provider.ProviderServiceImpl;
 import java.net.InetSocketAddress;
 
 public class Test {
-    public static void main(String[] args) {
 
-        Test test = new Test();
-        test.startServerAndProvider(test);
-
-        RpcConsumerProxy<ProviderService> importer = new RpcConsumerProxy<>();
-        ProviderService echo = importer.remoteCall(ProviderServiceImpl.class,new InetSocketAddress("localhost",8083));
-        System.out.println(echo.method("hello?"));
+    static {
+        startServer();
     }
 
-    private void startServerAndProvider(Test test){
-        new Thread(test::runServer).start();
+    public static void main(String[] args) {
+
+        RpcConsumerProxy<ProviderService> consumer = new RpcConsumerProxy<>();
+
+        ProviderService providerService = consumer.remoteCall(ProviderServiceImpl.class,new InetSocketAddress("localhost",8083));
+
+        System.out.println(providerService.testMethod("调用远程方法--"));
+
+    }
+
+    private static void startServer(){
+        new Thread(new Test()::runServer).start();
     }
 
     private void runServer(){
         try{
-            //服务发布到远程，就像一个socket服务端，等待连接
-            RpcServer.handleCall("localhost",8083);
+            //远程TCP服务打开，provide发布到远程
+            RpcServer.startServer("localhost",8083);
         }catch (Exception e){
             e.printStackTrace();
         }

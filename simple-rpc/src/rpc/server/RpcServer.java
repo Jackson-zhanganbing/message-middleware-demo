@@ -16,44 +16,42 @@ import java.util.concurrent.*;
  */
 public class RpcServer {
 
-    static Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-
-
     /**
      * 自定义线程池，自定义线程工厂和拒绝策略
      */
-/*    static Executor executor = new ThreadPoolExecutor(10, 10, 60,
+    static Executor executor = new ThreadPoolExecutor(10, 10, 0,
             TimeUnit.SECONDS, new LinkedBlockingDeque<>(),
             r -> {
-                Thread thread = new Thread();
-                thread.setName("myThread");
-                return thread;
+                Thread t = new Thread(r);
+                t.setName("myThread");
+                return t;
             },
-            (r, executor) -> {
-                System.out.println(r.toString() + " is discard");
-            }
-    );*/
+            (r, executor) -> System.out.println(r.toString() + " is discard")
+    );
 
     /**
      * 处理RPC请求调用
      */
-    public static void handleCall(String hostName, int port) throws Exception {
+    public static void startServer(String hostName, int port) throws Exception {
         ServerSocket server = new ServerSocket();
 
         server.bind(new InetSocketAddress(hostName, port));
         try {
             while (true) {
-                executor.execute(new RpcTask(server.accept()));
+                executor.execute(new RpcHandleTask(server.accept()));
             }
         } finally {
             server.close();
         }
     }
 
-    private static class RpcTask implements Runnable {
+    /**
+     * 接收TCP数据，反射调用provider的方法
+    */
+    private static class RpcHandleTask implements Runnable {
         Socket socket = null;
 
-        public RpcTask(Socket socket) {
+        public RpcHandleTask(Socket socket) {
             this.socket = socket;
         }
 

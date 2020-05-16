@@ -8,7 +8,7 @@ package rpc.provider;
  */
 public class ProviderServiceImpl implements ProviderService {
     @Override
-    public String method(String str) {
-        return str == null ? "hello consumer." : str + "---> hello consumer.";
+    public String testMethod(String str) {
+        return str == null ? "hello consumer." : str + "---> hello consumer. I can do something for you！";
     }
 }
