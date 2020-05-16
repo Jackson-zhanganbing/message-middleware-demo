@@ -8,13 +8,21 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
-public class RpcImporter<S> {
-    public S importer(final Class<?> serviceClass, final InetSocketAddress addr) {
+/**
+ * 服务消费者本地调用动态代理，处理连接、反序列化之类工作
+ *
+ * @author zab
+ * @date 2020-05-16 16:50
+ */
+public class RpcConsumerProxy<S> {
+    public S remoteCall(final Class<?> serviceClass, final InetSocketAddress addr) {
+
         return (S) Proxy.newProxyInstance(serviceClass.getClassLoader(),
                 new Class<?>[]{serviceClass.getInterfaces()[0]},
                 new InvocationHandler() {
                     @Override
                     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+
                         Socket socket = null;
                         ObjectOutputStream output = null;
                         ObjectInputStream input = null;
@@ -22,10 +30,15 @@ public class RpcImporter<S> {
                             socket = new Socket();
                             socket.connect(addr);
                             output = new ObjectOutputStream(socket.getOutputStream());
+
                             output.writeUTF(serviceClass.getName());
+
                             output.writeUTF(method.getName());
+
                             output.writeObject(method.getParameterTypes());
+
                             output.writeObject(args);
+
                             input = new ObjectInputStream(socket.getInputStream());
                             return input.readObject();
                         } finally {

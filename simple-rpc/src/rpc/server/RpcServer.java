@@ -1,4 +1,4 @@
-package rpc.provider;
+package rpc.server;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -6,31 +6,55 @@ import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
-public class RpcExporter {
+/**
+ * RPC服务端，将provider的服务发布成远程服务，供消费者调用
+ *
+ * @author zab
+ * @date 2020-05-16 17:55
+ */
+public class RpcServer {
 
     static Executor executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    public static void exporter(String hostName, int port) throws Exception {
+
+    /**
+     * 自定义线程池，自定义线程工厂和拒绝策略
+     */
+/*    static Executor executor = new ThreadPoolExecutor(10, 10, 60,
+            TimeUnit.SECONDS, new LinkedBlockingDeque<>(),
+            r -> {
+                Thread thread = new Thread();
+                thread.setName("myThread");
+                return thread;
+            },
+            (r, executor) -> {
+                System.out.println(r.toString() + " is discard");
+            }
+    );*/
+
+    /**
+     * 处理RPC请求调用
+     */
+    public static void handleCall(String hostName, int port) throws Exception {
         ServerSocket server = new ServerSocket();
 
         server.bind(new InetSocketAddress(hostName, port));
         try {
             while (true) {
-                executor.execute(new ExporterTask(server.accept()));
+                executor.execute(new RpcTask(server.accept()));
             }
         } finally {
             server.close();
         }
     }
 
-    private static class ExporterTask implements Runnable {
-        Socket client = null;
+    private static class RpcTask implements Runnable {
+        Socket socket = null;
 
-        public ExporterTask(Socket client) {
-            this.client = client;
+        public RpcTask(Socket socket) {
+            this.socket = socket;
         }
 
         @Override
@@ -39,16 +63,22 @@ public class RpcExporter {
             ObjectOutputStream output = null;
             try {
 
-                input = new ObjectInputStream(client.getInputStream());
-                String interfaceName = input.readUTF();
-                Class<?> service = Class.forName(interfaceName);
-                String methodName = input.readUTF();
-                Class<?>[] parameterTypes = (Class<?>[]) input.readObject();
-                Object[] arguments = (Object[]) input.readObject();
-                Method method = service.getMethod(methodName, parameterTypes);
-                Object result = method.invoke(service.newInstance(), arguments);
+                input = new ObjectInputStream(socket.getInputStream());
 
-                output = new ObjectOutputStream(client.getOutputStream());
+                String interfaceName = input.readUTF();
+
+                Class<?> clazz = Class.forName(interfaceName);
+
+                String methodName = input.readUTF();
+
+                Class<?>[] parameterTypes = (Class<?>[]) input.readObject();
+
+                Method method = clazz.getMethod(methodName, parameterTypes);
+
+                Object[] arguments = (Object[]) input.readObject();
+                Object result = method.invoke(clazz.newInstance(), arguments);
+
+                output = new ObjectOutputStream(socket.getOutputStream());
                 output.writeObject(result);
 
             } catch (Exception e) {
@@ -69,9 +99,9 @@ public class RpcExporter {
                         e.printStackTrace();
                     }
                 }
-                if (client != null) {
+                if (socket != null) {
                     try {
-                        client.close();
+                        socket.close();
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
