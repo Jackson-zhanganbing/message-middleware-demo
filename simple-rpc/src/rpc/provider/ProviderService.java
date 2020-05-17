@@ -7,5 +7,5 @@ package rpc.provider;
  * @date 2020-05-16 17:51
  */
 public interface ProviderService {
-    String testMethod(String ping);
+    String hello(String ping);
 }
